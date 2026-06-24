@@ -2,3 +2,5 @@
 
 .superpowers/
 ref/
+node_modules
+dist

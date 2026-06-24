@@ -1,0 +1,26 @@
+/* Tokens de diseño del ecosistema Pharos — Lumina */
+:root {
+  /* Fondos */
+  --color-night: #0a0908;
+  --color-panel: #15110d;
+  --color-linea: #2a2118;
+
+  /* Texto */
+  --color-ink: #efe7d8;
+  --color-muted: #9a8a76;
+
+  /* Acentos principales */
+  --color-beam: #f5a72c;    /* rayos ámbar */
+  --color-ember: #ff7a3c;
+  --color-gold: #ffd690;
+
+  /* Acentos por dominio */
+  --color-rayo: #f5a72c;    /* óptica geométrica / rayos */
+  --color-haz: #34d399;     /* haz gaussiano */
+  --color-onda: #38bdf8;    /* óptica ondulatoria */
+
+  /* Tipografías */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-text: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
+}
