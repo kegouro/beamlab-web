@@ -1,8 +1,12 @@
+// src/core/content/optics.ts — VERSIÓN EXTENDIDA
 // Tipos de escena óptica y trazador exacto de rayos para el Acto I.
 // Usa Snell EXACTO (refract de core/snell), nunca ABCD.
 // Todas las funciones son PURAS: sin DOM, sin estado global.
 
 import { refract, reflect } from '../snell';
+import { refractarSuperficieEsferica, reflejarEspejoCurvo } from '../imaging';
+import { nSellmeier, prismaDesviacion } from '../dispersion';
+import type { MaterialOptico } from '../dispersion';
 
 // ── Elementos ópticos (unión discriminada extensible) ────────────────────────
 
@@ -40,11 +44,45 @@ export interface ElementoEspejoPlano {
   angulo: number;
 }
 
+/** Lente delgada (aproximación thin-lens, refracción exacta angular) */
+export interface ElementoLente {
+  tipo: 'lente';
+  /** Posición x de la lente */
+  x: number;
+  /** Distancia focal (m). f > 0 = convergente. */
+  f: number;
+}
+
+/** Espejo esférico curvo */
+export interface ElementoEspejoCurvo {
+  tipo: 'espejo-curvo';
+  /** Posición x del espejo */
+  x: number;
+  /** Radio de curvatura (m). R > 0 = cóncavo (convergente). */
+  R: number;
+}
+
+/** Prisma triangular (refracción exacta Snell en dos caras) */
+export interface ElementoPrisma {
+  tipo: 'prisma';
+  /** Posición x de la primera cara del prisma */
+  x: number;
+  /** Ángulo del ápice (radianes) */
+  anguloApice: number;
+  /** Material del prisma (para n(λ)) */
+  material: MaterialOptico;
+  /** Longitud de onda en nm (por defecto 550 = luz verde) */
+  lambda?: number;
+}
+
 /** Unión discriminada de todos los elementos posibles */
 export type ElementoOptico =
   | ElementoFuente
   | ElementoInterfaz
-  | ElementoEspejoPlano;
+  | ElementoEspejoPlano
+  | ElementoLente
+  | ElementoEspejoCurvo
+  | ElementoPrisma;
 
 /** Escena óptica: lista ordenada de elementos */
 export interface EscenaOptica {
@@ -122,6 +160,48 @@ export function trazarRayos(escena: EscenaOptica, xFin: number): PuntoRayo[] {
       angulo = 2 * elemento.angulo - angulo;
       x = elemento.x;
       y = yEspejo;
+    } else if (elemento.tipo === 'lente') {
+      // Lente delgada exacta: desviación angular theta' = theta - y/f
+      if (x < elemento.x) {
+        const dx = elemento.x - x;
+        const yLente = y + dx * Math.tan(angulo);
+        puntos.push({ x: elemento.x, y: yLente });
+        // Thin-lens: desvía el ángulo según la altura
+        angulo = angulo - yLente / elemento.f;
+        x = elemento.x;
+        y = yLente;
+      }
+    } else if (elemento.tipo === 'espejo-curvo') {
+      // Espejo esférico curvo: reflexión exacta según normal en el punto
+      if (x <= elemento.x) {
+        const dx = elemento.x - x;
+        const yEspejo = y + dx * Math.tan(angulo);
+        puntos.push({ x: elemento.x, y: yEspejo });
+        // Reflexión exacta en espejo curvo
+        angulo = reflejarEspejoCurvo(yEspejo, angulo, { R: elemento.R });
+        x = elemento.x;
+        y = yEspejo;
+      }
+    } else if (elemento.tipo === 'prisma') {
+      // Prisma: refracción Snell exacta usando prismaDesviacion
+      if (x < elemento.x) {
+        const dx = elemento.x - x;
+        const yPrisma = y + dx * Math.tan(angulo);
+        puntos.push({ x: elemento.x, y: yPrisma });
+
+        const lambda = elemento.lambda ?? 550;
+        const n = nSellmeier(elemento.material, lambda);
+        // Desviar por el prisma: usar ángulo de desviación del prisma
+        const D = prismaDesviacion(n, elemento.anguloApice, Math.abs(angulo));
+        if (isNaN(D)) {
+          puntos[puntos.length - 1]!.tir = true;
+          angulo = reflect(angulo);
+        } else {
+          angulo = angulo + (angulo >= 0 ? D : -D);
+        }
+        x = elemento.x;
+        y = yPrisma;
+      }
     }
   }
 
