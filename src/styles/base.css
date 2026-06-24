@@ -1,5 +1,6 @@
 /* Estilos base de Lumina */
 @import './tokens.css';
+@import './bench.css';
 
 *, *::before, *::after {
   box-sizing: border-box;
