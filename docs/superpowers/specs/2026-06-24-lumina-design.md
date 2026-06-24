@@ -223,3 +223,35 @@ No son huecos del diseño, sino detalle de contenido que se concreta con las fue
 - Óptica no lineal, óptica de cristales completa (más allá de polarización básica), óptica de Fourier avanzada, holografía: posibles módulos futuros, no en este diseño.
 - Trazado de rayos 3D / skew rays riguroso: el plano meridional 2D cubre el curso; el 3D queda para florituras cinematográficas, no para cálculo.
 - Cuentas/login, multiusuario, backend: la app es estática + persistencia local.
+
+---
+
+## 14. Refinamientos físicos y visuales (revisión crítica — incorporados)
+
+Disección técnica que lleva el diseño de "muy bueno" a "obra de arte". Son **requisitos canónicos**, no opcionales.
+
+### 14.1 Física y `core/`
+- **Trazado exacto vs paraxial (distinción dura).** El Acto I traza con **Snell exacto** (`n₁ sin θ₁ = n₂ sin θ₂`), **nunca** con ABCD. ABCD vive solo en el Acto IV, bajo la aproximación paraxial.
+- **Indicador de paraxialidad.** En modo ABCD, si el rayo se aleja del régimen paraxial (ángulo grande), aviso visual: *"Salimos del reino paraxial; el modelo matricial pierde validez."* Esa fricción es donde ocurre el aprendizaje.
+- **Parámetro `q` con cuidado numérico.** Al derivar `w(z)` y `R(z)` de `Im(1/q)`, manejar las ramas de la función compleja; el paso por la cintura (`R → ∞`) no debe generar saltos ni `NaN`. Test explícito del cruce de cintura.
+- **Fase de Gouy.** Incluir `Δφ = arctan(z/z_R)` en `core/gaussian`; es lo que hace posible la resonancia en una cavidad láser.
+- **Difracción sin FFT ingenua.** Para patrones en tiempo real, usar **expresiones analíticas** de la intensidad (sinc² para rendija, series de Fresnel, Bessel para apertura circular) **evaluadas por-pixel en shader**. Reservar FFT para casos generales offline; evita aliasing, parpadeo y costo al variar parámetros en vivo.
+
+### 14.2 Color y render (la luz tiene física estricta)
+- **Colorimetría CIE real.** En dispersión (Acto I) y la Coda, mapear `λ → XYZ` (funciones de igualación CIE 1931) `→ sRGB` con manejo de *gamut*, en `core/colors`. Nada de *lookup* RGB ingenuo: el prisma y el espectrómetro muestran color **físicamente correcto**.
+- **Perfiles orgánicos.** El haz gaussiano se renderiza con su perfil de intensidad `I(r) = I₀ e^(−2r²/w²)` mediante gradientes, no dos líneas de envolvente. Antialiasing subpixel en el trazado de rayos.
+- **La cuarta dimensión: el tiempo.** Al añadir o mover un elemento, un **pulso de propagación** sutil: el rayo "viaja" desde la fuente, se refleja, se refracta. Hace visible la causalidad óptica, baja la carga cognitiva y sube la sensación cinemática.
+
+### 14.3 Rigor visualizado (animar lo abstracto)
+- **Reificación matricial.** El vector de estado `(y, θ)` es un **objeto visual** que se transforma al cruzar un elemento; se anima la matriz **multiplicando** al vector (la refracción como *shear* geométrico del espacio del rayo). Las matrices y la transformada de Fourier son **movimientos geométricos**, no texto KaTeX.
+- **Editor de Jones.** El usuario escribe el estado inicial `[Eₓ, E_y]ᵀ` y ve la estela del campo `E` modificarse al cruzar polarizadores/retardadores a lo largo del eje.
+- **Scrubbing de fase temporal.** En el Laboratorio, un slider de fase `ωt` que mueve los frentes de onda y **rota la elipse de polarización** en vivo mientras se ajusta una lámina `λ/4`.
+
+### 14.4 Estado y arquitectura
+- **Completado = nodo del grafo, no pantalla.** El estado "desbloqueado/completado" se vincula al **concepto** (nodo del grafo de módulos), no a la UI. Aprender "Snell" por la ruta histórica lo marca completado en la pedagógica sin necesidad de *replay*. (Refuerza §5.5.)
+
+### 14.5 Momentos "Aha!" (diseñados para provocar asombro)
+- **Cavidad inestable que "explota".** Al mover los espejos, si `g₁g₂ ∉ [0,1]` el haz gaussiano se desborda visualmente —choca contra los bordes del banco, pierde potencia—. El dolor visual del sistema inestable enseña más que la desigualdad.
+- **Desafío de Fermat.** El usuario mueve el punto de incidencia entre dos medios y ve una barra de "tiempo de viaje" minimizarse **justo** en el ángulo de Snell. Gamificación con propósito físico.
+
+> **Veredicto de la revisión:** diseño 9/10. Para el 10: precisión numérica/física real (CIE, Gouy, exacto≠paraxial), conceptos abstractos animados (matrices y FT como movimiento), y que la física "sangre" cuando un sistema falla (inestable, no paraxial, polarización cruzada).
